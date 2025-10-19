@@ -4,7 +4,7 @@ import "./style.css";
 document.body.innerHTML = `
   <p>Example image asset: <img src="${exampleIconUrl}" class="icon" /></p>
    <h1 class="title">SketchPad</h1>
-   <canvas id="myCanvas" width="600" height="400"></canvas>
+   <canvas id="myCanvas" ></canvas>
   <button type="button" id="clearBtn">Clear</button>
 `;
 
@@ -12,27 +12,69 @@ let drawing = false;
 
 const canvas = document.getElementById("myCanvas") as HTMLCanvasElement | null;
 const ctx = canvas?.getContext("2d");
+const clearBtn = document.getElementById("clearBtn");
 
 if (canvas && ctx) {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+}
+
+const strokes: { x: number; y: number }[][] = [];
+let currentStroke: { x: number; y: number }[] = [];
+
+if (canvas && ctx) {
+  const dispatchDrawingChanged = () => {
+    canvas.dispatchEvent(new Event("drawing-changed"));
+    console.log("Drawing changed, total strokes:", strokes.length);
+  };
+
   canvas.addEventListener("mousedown", (e) => {
     drawing = true;
-    ctx.beginPath();
-    ctx.moveTo(e.offsetX, e.offsetY);
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-    canvas.addEventListener("mousemove", (e) => {
-      if (!drawing) return;
-      ctx.lineTo(e.offsetX, e.offsetY);
+    currentStroke = [{ x, y }];
+    strokes.push(currentStroke);
+    dispatchDrawingChanged();
+  });
+
+  canvas.addEventListener("mousemove", (e) => {
+    if (!drawing) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    currentStroke.push({ x, y });
+    dispatchDrawingChanged();
+  });
+
+  canvas.addEventListener("mouseup", () => (drawing = false));
+  canvas.addEventListener("mouseleave", () => (drawing = false));
+
+  canvas.addEventListener("drawing-changed", () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "black";
+
+    strokes.forEach((stroke) => {
+      if (stroke.length === 0) return;
+      ctx.beginPath();
+      ctx.moveTo(stroke[0]!.x, stroke[0]!.y);
+      for (let i = 1; i < stroke.length; i++) {
+        ctx.lineTo(stroke[i]!.x, stroke[i]!.y);
+      }
       ctx.stroke();
     });
-
-    canvas.addEventListener("mouseup", () => drawing = false);
-    canvas.addEventListener("mouseleave", () => drawing = false);
   });
 }
 
-const clearBtn = document.getElementById("clearBtn");
+// Clear button
 if (clearBtn && canvas && ctx) {
   clearBtn.addEventListener("click", () => {
+    strokes.length = 0;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.dispatchEvent(new Event("drawing-changed"));
   });
 }
