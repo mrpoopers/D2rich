@@ -32,8 +32,10 @@ class ToolPreview implements Drawable {
 
 class MarkerLine implements Drawable {
   private points: { x: number; y: number }[] = [];
+  private thickness: number;
 
-  constructor(startX: number, startY: number) {
+  constructor(startX: number, startY: number, thickness: number) {
+    this.thickness = thickness; // store style
     this.points.push({ x: startX, y: startY });
   }
 
@@ -44,17 +46,18 @@ class MarkerLine implements Drawable {
   display(ctx: CanvasRenderingContext2D) {
     if (this.points.length < 2) return;
 
+    ctx.lineWidth = this.thickness;
+    ctx.strokeStyle = "black";
+
     ctx.beginPath();
-    const firstPoint = this.points[0];
-    if (firstPoint) {
-      ctx.moveTo(firstPoint.x, firstPoint.y);
-    }
+    const first = this.points[0];
+    if (!first) return;
+    ctx.moveTo(first.x, first.y);
 
     for (let i = 1; i < this.points.length; i++) {
-      const point = this.points[i];
-      if (point) {
-        ctx.lineTo(point.x, point.y);
-      }
+      const p = this.points[i];
+      if (!p) continue;
+      ctx.lineTo(p.x, p.y);
     }
 
     ctx.stroke();
@@ -69,10 +72,14 @@ document.body.innerHTML = `
   <button type="button" id="clearBtn">Clear</button>
   <button type="button" id="undoBtn">Undo</button>
   <button type="button" id="redoBtn">Redo</button>
+
+  <button type="button" id="thinBtn">Thin</button>
+  <button type="button" id="thickBtn">Thick</button>
 `;
 
 let drawing = false;
 let toolPreview: ToolPreview | null = null;
+let currentThickness = 2;
 
 const canvas = document.getElementById("myCanvas") as HTMLCanvasElement | null;
 const ctx = canvas?.getContext("2d");
@@ -80,6 +87,8 @@ const ctx = canvas?.getContext("2d");
 const clearBtn = document.getElementById("clearBtn");
 const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
+const thinBtn = document.getElementById("thinBtn");
+const thickBtn = document.getElementById("thickBtn");
 
 // Match canvas resolution to displayed size
 if (canvas && ctx) {
@@ -92,11 +101,39 @@ const strokes: MarkerLine[] = [];
 const undoneStrokes: MarkerLine[] = [];
 let currentLine: MarkerLine | null = null;
 
-// helper
+//thickness tool buttons
+
+function updateToolButtons() {
+  thinBtn?.classList.remove("selectedTool");
+  thickBtn?.classList.remove("selectedTool");
+
+  if (currentThickness === 2) thinBtn?.classList.add("selectedTool");
+  if (currentThickness === 6) thickBtn?.classList.add("selectedTool");
+}
+
+thinBtn?.addEventListener("click", () => {
+  currentThickness = 2;
+  updateToolButtons();
+});
+
+thickBtn?.addEventListener("click", () => {
+  currentThickness = 6;
+  updateToolButtons();
+});
+
+// Initialize tool button states
+
 function getMouse(e: MouseEvent, canvas: HTMLCanvasElement) {
   const r = canvas.getBoundingClientRect();
   return { x: e.clientX - r.left, y: e.clientY - r.top };
 }
+
+function flashButton(btn: HTMLElement) {
+  btn.classList.add("selectedTool");
+  setTimeout(() => btn.classList.remove("selectedTool"), 150); // quick flash
+}
+
+// Drawing logic
 
 if (canvas && ctx) {
   const dispatchDrawingChanged = () => {
@@ -107,7 +144,7 @@ if (canvas && ctx) {
     drawing = true;
 
     const { x, y } = getMouse(e, canvas);
-    currentLine = new MarkerLine(x, y);
+    currentLine = new MarkerLine(x, y, currentThickness); // ← add thickness
     strokes.push(currentLine);
 
     dispatchDrawingChanged();
@@ -172,6 +209,7 @@ if (canvas) {
 // Clear button
 if (clearBtn && canvas && ctx) {
   clearBtn.addEventListener("click", () => {
+    flashButton(clearBtn);
     strokes.length = 0;
     undoneStrokes.length = 0;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -182,6 +220,7 @@ if (clearBtn && canvas && ctx) {
 // Undo button
 if (undoBtn && canvas) {
   undoBtn.addEventListener("click", () => {
+    flashButton(undoBtn);
     if (strokes.length > 0) {
       const undone = strokes.pop();
       if (undone) undoneStrokes.push(undone);
@@ -193,6 +232,7 @@ if (undoBtn && canvas) {
 // Redo button
 if (redoBtn && canvas) {
   redoBtn.addEventListener("click", () => {
+    flashButton(redoBtn);
     if (undoneStrokes.length > 0) {
       const redone = undoneStrokes.pop();
       if (redone) strokes.push(redone);
