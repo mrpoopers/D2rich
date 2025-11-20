@@ -64,6 +64,31 @@ class MarkerLine implements Drawable {
   }
 }
 
+class Sticker implements Drawable {
+  public x: number;
+  public y: number;
+  public size: number = 32; // small emoji size
+  public emoji: string;
+
+  constructor(x: number, y: number, emoji: string) {
+    this.x = x;
+    this.y = y;
+    this.emoji = emoji;
+  }
+
+  drag(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.font = `${this.size}px serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(this.emoji, this.x, this.y);
+  }
+}
+
 // Set up HTML structure
 document.body.innerHTML = `
   <p>Example image asset: <img src="${exampleIconUrl}" class="icon" /></p>
@@ -75,11 +100,19 @@ document.body.innerHTML = `
 
   <button type="button" id="thinBtn">Thin</button>
   <button type="button" id="thickBtn">Thick</button>
+
+  <button type="button" id="sticker1">🐸</button>
+  <button type="button" id="sticker2">🦉</button>
+  <button type="button" id="sticker3">🐻</button>
 `;
 
 let drawing = false;
 let toolPreview: ToolPreview | null = null;
 let currentThickness = 2;
+
+let currentTool: "draw" | "sticker" = "draw";
+let currentSticker: string | null = null;
+let stickerPreview: Sticker | null = null;
 
 const canvas = document.getElementById("myCanvas") as HTMLCanvasElement | null;
 const ctx = canvas?.getContext("2d");
@@ -90,6 +123,29 @@ const redoBtn = document.getElementById("redoBtn");
 const thinBtn = document.getElementById("thinBtn");
 const thickBtn = document.getElementById("thickBtn");
 
+//sticker tool buttons
+
+const sticker1 = document.getElementById("sticker1");
+const sticker2 = document.getElementById("sticker2");
+const sticker3 = document.getElementById("sticker3");
+
+function selectSticker(emoji: string) {
+  currentTool = "sticker";
+  currentSticker = emoji;
+
+  // preview object
+  stickerPreview = new Sticker(0, 0, emoji);
+
+  // flash the button
+  if (emoji === "🐸") flashButton(sticker1!);
+  if (emoji === "🦉") flashButton(sticker2!);
+  if (emoji === "🐻") flashButton(sticker3!);
+}
+
+sticker1?.addEventListener("click", () => selectSticker("🐸"));
+sticker2?.addEventListener("click", () => selectSticker("🦉"));
+sticker3?.addEventListener("click", () => selectSticker("🐻"));
+
 // Match canvas resolution to displayed size
 if (canvas && ctx) {
   canvas.width = canvas.clientWidth;
@@ -97,8 +153,8 @@ if (canvas && ctx) {
 }
 
 // Store strokes
-const strokes: MarkerLine[] = [];
-const undoneStrokes: MarkerLine[] = [];
+const strokes: Drawable[] = [];
+const undoneStrokes: Drawable[] = [];
 let currentLine: MarkerLine | null = null;
 
 //thickness tool buttons
@@ -113,11 +169,17 @@ function updateToolButtons() {
 
 thinBtn?.addEventListener("click", () => {
   currentThickness = 2;
+  currentTool = "draw";
+  currentSticker = null;
+  stickerPreview = null;
   updateToolButtons();
 });
 
 thickBtn?.addEventListener("click", () => {
   currentThickness = 6;
+  currentTool = "draw";
+  currentSticker = null;
+  stickerPreview = null;
   updateToolButtons();
 });
 
@@ -141,13 +203,21 @@ if (canvas && ctx) {
   };
 
   canvas.addEventListener("mousedown", (e) => {
-    drawing = true;
-
     const { x, y } = getMouse(e, canvas);
-    currentLine = new MarkerLine(x, y, currentThickness); // ← add thickness
-    strokes.push(currentLine);
 
-    dispatchDrawingChanged();
+    if (currentTool === "draw") {
+      drawing = true;
+      currentLine = new MarkerLine(x, y, currentThickness);
+      strokes.push(currentLine);
+    }
+
+    if (currentTool === "sticker" && currentSticker) {
+      const s = new Sticker(x, y, currentSticker);
+      strokes.push(s); // add sticker to drawing
+      stickerPreview = null;
+    }
+
+    canvas.dispatchEvent(new Event("drawing-changed"));
   });
 
   canvas.addEventListener("mousemove", (e) => {
@@ -155,10 +225,16 @@ if (canvas && ctx) {
 
     canvas.dispatchEvent(new CustomEvent("tool-moved", { detail: { x, y } }));
 
-    if (!drawing || !currentLine) return;
+    if (currentTool === "draw") {
+      if (drawing && currentLine) currentLine.drag(x, y);
+    }
 
-    currentLine.drag(x, y);
-    dispatchDrawingChanged();
+    if (currentTool === "sticker" && stickerPreview) {
+      stickerPreview.x = x;
+      stickerPreview.y = y;
+    }
+
+    canvas.dispatchEvent(new Event("drawing-changed"));
   });
 
   canvas.addEventListener("mouseup", () => (drawing = false));
@@ -173,12 +249,15 @@ if (canvas && ctx) {
   canvas.addEventListener("drawing-changed", () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "black";
-
     strokes.forEach((stroke) => stroke.display(ctx));
 
-    if (toolPreview) toolPreview.display(ctx);
+    if (currentTool === "draw" && toolPreview) {
+      toolPreview.display(ctx);
+    }
+
+    if (currentTool === "sticker" && stickerPreview) {
+      stickerPreview.display(ctx);
+    }
   });
 }
 
