@@ -64,6 +64,8 @@ class MarkerLine implements Drawable {
   }
 }
 
+let stickerList: string[] = ["🐸", "🦉", "🐻"];
+
 class Sticker implements Drawable {
   public x: number;
   public y: number;
@@ -101,9 +103,8 @@ document.body.innerHTML = `
   <button type="button" id="thinBtn">Thin</button>
   <button type="button" id="thickBtn">Thick</button>
 
-  <button type="button" id="sticker1">🐸</button>
-  <button type="button" id="sticker2">🦉</button>
-  <button type="button" id="sticker3">🐻</button>
+  <button type="button" id="customStickerBtn">Add Sticker</button>
+  <div id="stickerButtons"></div>
 `;
 
 let drawing = false;
@@ -125,26 +126,44 @@ const thickBtn = document.getElementById("thickBtn");
 
 //sticker tool buttons
 
-const sticker1 = document.getElementById("sticker1");
-const sticker2 = document.getElementById("sticker2");
-const sticker3 = document.getElementById("sticker3");
+const stickerButtonsDiv = document.getElementById("stickerButtons")!;
 
 function selectSticker(emoji: string) {
   currentTool = "sticker";
   currentSticker = emoji;
 
-  // preview object
   stickerPreview = new Sticker(0, 0, emoji);
-
-  // flash the button
-  if (emoji === "🐸") flashButton(sticker1!);
-  if (emoji === "🦉") flashButton(sticker2!);
-  if (emoji === "🐻") flashButton(sticker3!);
 }
 
-sticker1?.addEventListener("click", () => selectSticker("🐸"));
-sticker2?.addEventListener("click", () => selectSticker("🦉"));
-sticker3?.addEventListener("click", () => selectSticker("🐻"));
+function renderStickerButtons() {
+  stickerButtonsDiv.innerHTML = ""; // clear existing
+
+  stickerList.forEach((emoji) => {
+    const btn = document.createElement("button");
+    btn.textContent = emoji;
+
+    btn.addEventListener("click", () => selectSticker(emoji));
+
+    stickerButtonsDiv.appendChild(btn);
+  });
+}
+
+const customStickerBtn = document.getElementById("customStickerBtn");
+
+customStickerBtn?.addEventListener("click", () => {
+  const text = prompt("Custom sticker text", "🧽");
+
+  if (!text) return; // user cancelled
+
+  // Add to list
+  stickerList.push(text);
+
+  // Re-render buttons
+  renderStickerButtons();
+});
+
+// First render of the initial stickers
+renderStickerButtons();
 
 // Match canvas resolution to displayed size
 if (canvas && ctx) {
