@@ -64,6 +64,7 @@ class MarkerLine implements Drawable {
   }
 }
 
+// deno-lint-ignore prefer-const
 let stickerList: string[] = ["🐸", "🦉", "🐻"];
 
 class Sticker implements Drawable {
@@ -102,6 +103,7 @@ document.body.innerHTML = `
 
   <button type="button" id="thinBtn">Thin</button>
   <button type="button" id="thickBtn">Thick</button>
+  <button type="button" id="exportBtn">Export</button>
 
   <button type="button" id="customStickerBtn">Add Sticker</button>
   <div id="stickerButtons"></div>
@@ -149,6 +151,7 @@ function renderStickerButtons() {
 }
 
 const customStickerBtn = document.getElementById("customStickerBtn");
+const exportBtn = document.getElementById("exportBtn");
 
 customStickerBtn?.addEventListener("click", () => {
   const text = prompt("Custom sticker text", "🧽");
@@ -164,6 +167,28 @@ customStickerBtn?.addEventListener("click", () => {
 
 // First render of the initial stickers
 renderStickerButtons();
+
+if (exportBtn && canvas) {
+  exportBtn.addEventListener("click", () => {
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = 1024;
+    exportCanvas.height = 1024;
+
+    const exportCtx = exportCanvas.getContext("2d");
+    if (!exportCtx) return;
+
+    const scaleX = exportCanvas.width / canvas.width;
+    const scaleY = exportCanvas.height / canvas.height;
+
+    // Scale so the drawing expands to fill 1024×1024
+    exportCtx.scale(scaleX, scaleY);
+
+    const anchor = document.createElement("a");
+    anchor.href = exportCanvas.toDataURL("image/png");
+    anchor.download = "sketchpad.png";
+    anchor.click();
+  });
+}
 
 // Match canvas resolution to displayed size
 if (canvas && ctx) {
