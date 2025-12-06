@@ -207,8 +207,8 @@ function updateToolButtons() {
   thinBtn?.classList.remove("selectedTool");
   thickBtn?.classList.remove("selectedTool");
 
-  if (currentThickness === 2) thinBtn?.classList.add("selectedTool");
-  if (currentThickness === 6) thickBtn?.classList.add("selectedTool");
+  if (currentThickness === 2.5) thinBtn?.classList.add("selectedTool");
+  if (currentThickness === 6.5) thickBtn?.classList.add("selectedTool");
 }
 
 thinBtn?.addEventListener("click", () => {

@@ -15,3 +15,13 @@
   background-color: #88d;
   color: white;
 }
+
+#stickerButtons button {
+  font-size: 18px;
+  padding: 8px 12px;
+}
+
+#exportBtn {
+  margin-top: 8px;
+  font-weight: bold;
+}
