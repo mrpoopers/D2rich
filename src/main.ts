@@ -21,8 +21,8 @@ class ToolPreview implements Drawable {
     ctx.save();
     ctx.beginPath();
     ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(0,0,0,0.4)";
-    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    ctx.strokeStyle = currentMarkerColor;
+    ctx.fillStyle = currentMarkerColor + "33";
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
@@ -33,9 +33,16 @@ class ToolPreview implements Drawable {
 class MarkerLine implements Drawable {
   private points: { x: number; y: number }[] = [];
   private thickness: number;
+  private color: string;
 
-  constructor(startX: number, startY: number, thickness: number) {
-    this.thickness = thickness; // store style
+  constructor(
+    startX: number,
+    startY: number,
+    thickness: number,
+    color: string,
+  ) {
+    this.thickness = thickness;
+    this.color = color;
     this.points.push({ x: startX, y: startY });
   }
 
@@ -47,7 +54,7 @@ class MarkerLine implements Drawable {
     if (this.points.length < 2) return;
 
     ctx.lineWidth = this.thickness;
-    ctx.strokeStyle = "black";
+    ctx.strokeStyle = this.color;
 
     ctx.beginPath();
     const first = this.points[0];
@@ -116,6 +123,7 @@ let currentThickness = 2;
 let currentTool: "draw" | "sticker" = "draw";
 let currentSticker: string | null = null;
 let stickerPreview: Sticker | null = null;
+let currentMarkerColor = "black";
 
 const canvas = document.getElementById("myCanvas") as HTMLCanvasElement | null;
 const ctx = canvas?.getContext("2d");
@@ -148,6 +156,11 @@ function renderStickerButtons() {
 
     stickerButtonsDiv.appendChild(btn);
   });
+}
+
+function randomColor() {
+  const hue = Math.floor(Math.random() * 360);
+  return `hsl(${hue}, 80%, 45%)`;
 }
 
 const customStickerBtn = document.getElementById("customStickerBtn");
@@ -216,6 +229,8 @@ thinBtn?.addEventListener("click", () => {
   currentTool = "draw";
   currentSticker = null;
   stickerPreview = null;
+
+  currentMarkerColor = randomColor();
   updateToolButtons();
 });
 
@@ -224,6 +239,8 @@ thickBtn?.addEventListener("click", () => {
   currentTool = "draw";
   currentSticker = null;
   stickerPreview = null;
+
+  currentMarkerColor = randomColor();
   updateToolButtons();
 });
 
@@ -251,7 +268,12 @@ if (canvas && ctx) {
 
     if (currentTool === "draw") {
       drawing = true;
-      currentLine = new MarkerLine(x, y, currentThickness);
+      currentLine = new MarkerLine(
+        x,
+        y,
+        currentThickness,
+        currentMarkerColor,
+      );
       strokes.push(currentLine);
     }
 
